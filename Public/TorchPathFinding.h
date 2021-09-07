@@ -28,6 +28,9 @@ struct FPathFinding
     FQuat rotation,
     int32 numSegments,
     float sphereRadius,
+    float randomSteeringAngle,
+    float randomRotationItensity,
+    float targetRotationItensity,
     FPathSample& sample,
     bool debug);
 };

@@ -19,11 +19,11 @@ void ATorchAIController::BeginPlay()
   Super::BeginPlay();
 
   // Set path prediction timer
-  GetWorldTimerManager().SetTimer(mPredictionTimeHdl, this, &ATorchAIController::PredictPath, 1.0f, true);
+  //GetWorldTimerManager().SetTimer(mPredictionTimeHdl, this, &ATorchAIController::PredictPath, 1.0f, true);
 }
 void ATorchAIController::Tick(float deltaTime)
 {
-
+  PredictPath();
 }
 
 void ATorchAIController::PredictPath()
@@ -35,7 +35,7 @@ void ATorchAIController::PredictPath()
     // Setup path finding
     bool hit = false;
     FVector origin = character->GetActorLocation();
-    FVector target = FVector::ZeroVector;
+    FVector target = FVector{ 0.0f, 0.0f, 88.0f };
     FRotator rotation = character->GetActorRotation();
     EBehaviorState::Type behaviorState = EBehaviorState::Surface;
 
@@ -58,13 +58,11 @@ void ATorchAIController::PredictPath()
           for (int32 subSample = 0; subSample <= mNumSubPredictions; ++subSample)
           {
             // Get current view angle
-            float degree = subSample * ((mViewAngle * 2.0f) / mNumSubPredictions) - mViewAngle;
-            FVector subDirection = direction.RotateAngleAxis(degree, up);
+            float randomSteeringAngle = subSample * ((mViewAngle * 2.0f) / mNumSubPredictions) - mViewAngle;
 
             // Sample path
-            FPathSample subPath;
-            hit = FPathFinding::SamplePathSurface(world, origin, target, subDirection.Rotation().Quaternion(), mNumPathSegments, mTraceSphereRadius, subPath, mDebug);
-            subPaths.Emplace(subPath);
+            int32 subIndex = subPaths.Emplace(FPathSample{});
+            hit = FPathFinding::SamplePathSurface(world, origin, target, rotation.Quaternion(), mNumPathSegments, mTraceSphereRadius, randomSteeringAngle, mRandomRotationIntensity, mTargetRotationIntensity, subPaths[subIndex], mDebug);
           }
 
           // Choose best sub-path to continue on
@@ -103,8 +101,8 @@ void ATorchAIController::FollowPath()
   ACharacter* character = GetCharacter();
   if (character)
   {
-    character->GetCharacterMovement()->Add
-    character->SetActorLocationAndRotation(FVector{}, FQuat{});
+    //character->GetCharacterMovement()->Add
+    //character->SetActorLocationAndRotation(FVector{}, FQuat{});
   }
 }
 void ATorchAIController::DrawDebugGizmo()

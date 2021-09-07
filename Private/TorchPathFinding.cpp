@@ -21,6 +21,9 @@ bool FPathFinding::SamplePathSurface(
   FQuat rotation,
   int32 numSegments,
   float sphereRadius,
+  float randomSteeringAngle,
+  float randomRotationItensity,
+  float targetRotationItensity,
   FPathSample& sample,
   bool debug)
 {
@@ -47,17 +50,18 @@ bool FPathFinding::SamplePathSurface(
     }
     else
     {
-      // Apply random rotation correction
-      float noiseRotation = FMath::PerlinNoise3D(origin * 0.1f);
+      // Apply random rotation
+      //float noiseRotation = FMath::PerlinNoise3D(origin * 0.1f);
+      //float randomYaw = FMath::RandRange(-20.0f, 20.0f);
       FRotator r = rotation.Rotator();
-      r.Yaw += noiseRotation * 75.0f;
+      r.Yaw += randomSteeringAngle;
       FQuat noiseRotationNew = r.Quaternion() * rotation.Inverse();
-      rotation += (noiseRotationNew * rotation) * 2.0f;
+      rotation += (noiseRotationNew * rotation) * randomRotationItensity;
       rotation.Normalize();
 
-      // Apply target rotation correction
+      // Apply target rotation
       FQuat targetRotationDiff = targetDirection.Rotation().Quaternion() * rotation.Inverse();
-      rotation += (targetRotationDiff * rotation) * 0.2f;
+      rotation += (targetRotationDiff * rotation) * targetRotationItensity;
       rotation.Normalize();
 
       // March along forward

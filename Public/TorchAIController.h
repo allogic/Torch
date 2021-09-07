@@ -39,12 +39,18 @@ public:
   float mNumPathSegments = 32;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  float mViewAngle = 75.0f;
+  float mViewAngle = 45.0f;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
   float mTraceSphereRadius = 22.0f;
 
-  UPROPERTY(VisibleAnywhere, BlueprintRead, Category = TorchPathFinding)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
+  float mRandomRotationIntensity = 1.0f;
+
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
+  float mTargetRotationIntensity = 0.2f;
+
+  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = TorchPathFinding)
   USplineComponent* mSplineComponent = nullptr;
 
   ATorchAIController();
