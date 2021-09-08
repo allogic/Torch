@@ -3,57 +3,77 @@
 #include "DrawDebugHelpers.h"
 #include "TorchAICharacter.h"
 #include "TorchMath.h"
-#include "TorchPathFinding.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SplineComponent.h"
 
 ATorchAIController::ATorchAIController()
 {
-  // Attach spline component
-  mSplineComponent = CreateDefaultSubobject<USplineComponent>("Path");
-  mSplineComponent->SetupAttachment(RootComponent);
+
 }
 
 void ATorchAIController::BeginPlay()
 {
   Super::BeginPlay();
-
-  // Set path prediction timer
-  //GetWorldTimerManager().SetTimer(mPredictionTimeHdl, this, &ATorchAIController::PredictPath, 1.0f, true);
 }
 void ATorchAIController::Tick(float deltaTime)
 {
-  PredictPath();
+  // Switch path finding behavior
+  switch (mPathFindingState)
+  {
+    case EPathFindingState::None:
+    {
+      FindPath();
+    }
+    case EPathFindingState::Found:
+    {
+      break;
+    }
+  }
+
+  // Switch path following behavior
+  switch (mPathFollowingState)
+  {
+    case EPathFollowingState::None:
+    {
+      mPathFollowingState = EPathFollowingState::Moving;
+      break;
+    }
+    case EPathFollowingState::Idle:
+    {
+      break;
+    }
+    case EPathFollowingState::Moving:
+    {
+      FollowPath(deltaTime);
+      break;
+    }
+  }
 }
 
-void ATorchAIController::PredictPath()
+void ATorchAIController::FindPath()
 {
   ACharacter* character = GetCharacter();
   UWorld* world = GetWorld();
   if (character && world)
   {
     // Setup path finding
-    bool hit = false;
     FVector origin = character->GetActorLocation();
     FVector target = FVector{ 0.0f, 0.0f, 88.0f };
     FRotator rotation = character->GetActorRotation();
-    EBehaviorState::Type behaviorState = EBehaviorState::Surface;
+    FVector normal = character->GetActorUpVector();
+    FVector right = character->GetActorRightVector();
+
+    // Clear old predictions
+    mPredictionSamples.Empty();
 
     // Begin sampling
     for (int32 sample = 0; sample < mNumPredictions; ++sample)
     {
-      // Switch behavior based on different environment properties
-      switch (behaviorState)
+      // Switch behavior based on different environmental properties
+      switch (mSurfaceState)
       {
-        case EBehaviorState::Surface:
+        case ESurfaceState::Grounded:
         {
-          // Setup 1D view frustum
-          FVector direction = rotation.Quaternion().GetForwardVector();
-          FVector up = rotation.Quaternion().GetUpVector();
-
-          // Setup path scoring array
-          TArray<FPathSample> subPaths;
-
           // Begin sub sampling
           for (int32 subSample = 0; subSample <= mNumSubPredictions; ++subSample)
           {
@@ -61,50 +81,91 @@ void ATorchAIController::PredictPath()
             float randomSteeringAngle = subSample * ((mViewAngle * 2.0f) / mNumSubPredictions) - mViewAngle;
 
             // Sample path
-            int32 subIndex = subPaths.Emplace(FPathSample{});
-            hit = FPathFinding::SamplePathSurface(world, origin, target, rotation.Quaternion(), mNumPathSegments, mTraceSphereRadius, randomSteeringAngle, mRandomRotationIntensity, mTargetRotationIntensity, subPaths[subIndex], mDebug);
+            FPathFinding::SampleOptimalPathAlongSurfaces(
+              world,
+              origin,
+              target,
+              rotation.Quaternion(),
+              mNumPathSegments,
+              mTraceSphereRadius,
+              randomSteeringAngle,
+              mRandomRotationIntensity, mTargetRotationIntensity,
+              mPredictionSamples[mPredictionSamples.Emplace()],
+              normal,
+              mEnableDebug,
+              mDebugPersistence);
           }
 
           // Choose best sub-path to continue on
-          subPaths.Sort();
+          mPredictionSamples.Sort();
 
-          // Promote new origin and rotation
-          if (subPaths.Num() > 0)
+          // Validate prediction results
+          if (mPredictionSamples.Num() > 0)
           {
-            TArray<FTransform>& subPath = subPaths[0].Path;
-            if (subPath.Num() > 0)
+            TArray<FTransform>& optimalPath = mPredictionSamples[0].Path;
+            if (optimalPath.Num() > 0)
             {
-              origin = subPath[subPath.Num() - 1].GetLocation();
-              rotation = subPath[subPath.Num() - 1].GetRotation().Rotator();
+              // Promote new origin and rotation
+              origin = optimalPath[optimalPath.Num() - 1].GetLocation();
+              rotation = optimalPath[optimalPath.Num() - 1].GetRotation().Rotator();
             }
-          }
 
-          // Flip behavior state
-          if (hit)
-          {
-            
+            // Change behavior to found
+            mPathFindingState = EPathFindingState::Found;
           }
-          break;
         }
-        case EBehaviorState::Airborne:
+        case ESurfaceState::Airborne:
         {
           break;
         }
       }
     }
-
-    // Update spline with new path
   }
 }
-void ATorchAIController::FollowPath()
+void ATorchAIController::FollowPath(float deltaTime)
 {
+  // Setup path following
   ACharacter* character = GetCharacter();
   if (character)
   {
-    //character->GetCharacterMovement()->Add
-    //character->SetActorLocationAndRotation(FVector{}, FQuat{});
+    // Currently linearly interpolate between samples (also test physics based approach)
+    FVector sampleLocation = FMath::Lerp(
+      mPredictionSamples[mCurrentSampleIndex].Path[mCurrentSegmentIndex].GetLocation(),
+      mPredictionSamples[mCurrentSampleIndex].Path[mCurrentSegmentIndex + 1].GetLocation(),
+      deltaTime);
+    FQuat sampleRotation = FMath::Lerp(
+      mPredictionSamples[mCurrentSampleIndex].Path[mCurrentSegmentIndex].GetRotation(),
+      mPredictionSamples[mCurrentSampleIndex].Path[mCurrentSegmentIndex + 1].GetRotation(),
+      deltaTime);
+
+    // Set new location and rotation
+    character->SetActorLocationAndRotation(sampleLocation, sampleRotation);
+
+    // Check if we close to desired time
+    mCurrentInterpolTime += mMovementSpeed * deltaTime;
+    if (mCurrentInterpolTime >= 1.0f)
+    {
+      // Reset interpolation time
+      mCurrentInterpolTime = 0.0f;
+
+      // Keep everything in bounds
+      mCurrentSegmentIndex++;
+      if (mCurrentSegmentIndex >= mPredictionSamples[mCurrentSampleIndex].Path.Num() - 1)
+      {
+        // Reset segment index
+        mCurrentSegmentIndex = 0;
+
+        //mCurrentSampleIndex++;
+        //if (mCurrentSampleIndex > mPredictionSamples.Num() - 1)
+        //{
+        //  // Reset sample index
+        //  mCurrentSampleIndex = 0;
+        //}
+      }
+    }
   }
 }
+
 void ATorchAIController::DrawDebugGizmo()
 {
   if (false)

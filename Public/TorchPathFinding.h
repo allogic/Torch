@@ -12,16 +12,7 @@ struct FPathSample
 
 struct FPathFinding
 {
-  static bool SamplePathAirborn(
-    UWorld* world,
-    FVector origin,
-    FVector target,
-    FQuat rotation,
-    int32 numSegments,
-    float sphereRadius,
-    FPathSample& sample,
-    bool debug);
-  static bool SamplePathSurface(
+  static void SampleOptimalPathAlongSurfaces(
     UWorld* world,
     FVector origin,
     FVector target,
@@ -32,5 +23,7 @@ struct FPathFinding
     float randomRotationItensity,
     float targetRotationItensity,
     FPathSample& sample,
-    bool debug);
+    FVector& normal,
+    bool enableDebug,
+    bool debugPersistence);
 };

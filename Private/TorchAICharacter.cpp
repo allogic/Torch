@@ -6,6 +6,9 @@
 
 ATorchAICharacter::ATorchAICharacter()
 {
+  // Set mesh collision channel
+  GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+
   // Setup sight system
   mHeadLocation = CreateDefaultSubobject<USceneComponent>(TEXT("HeadLocation"));
   mHeadLocation->SetupAttachment(RootComponent);

@@ -2,17 +2,35 @@
 
 #include "CoreMinimal.h"
 #include "AIController.h"
+#include "TorchPathFinding.h"
 #include "TorchAIController.generated.h"
 
 class UNavigationSystemV1;
 class ATorchAICharacter;
-class USplineComponent;
 
-namespace EBehaviorState
+namespace EPathFindingState
 {
   enum Type
   {
-    Surface,
+    None,
+    Found,
+  };
+}
+namespace EPathFollowingState
+{
+  enum Type
+  {
+    None,
+    Idle,
+    Moving,
+  };
+}
+namespace ESurfaceState
+{
+  enum Type
+  {
+    None,
+    Grounded,
     Airborne,
   };
 }
@@ -23,35 +41,46 @@ class TORCH_API ATorchAIController : public AAIController
   GENERATED_BODY()
 
 public:
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  bool mDebug = true;
+  /*
+  * Debugging
+  */
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  AActor* mTargetActor = nullptr;
+  bool mEnableDebug = true;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  int32 mNumPredictions = 10;
+  bool mDebugPersistence = true;
+
+  /*
+  * Path finding
+  */
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  int32 mNumSubPredictions = 9;
+  int32 mNumPredictions = 3;
+
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
+  int32 mNumSubPredictions = 10;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
   float mNumPathSegments = 32;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  float mViewAngle = 45.0f;
+  float mViewAngle = 25.0f;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
   float mTraceSphereRadius = 22.0f;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  float mRandomRotationIntensity = 1.0f;
+  float mRandomRotationIntensity = 1.5f;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  float mTargetRotationIntensity = 0.2f;
+  float mTargetRotationIntensity = 0.25f;
 
-  UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = TorchPathFinding)
-  USplineComponent* mSplineComponent = nullptr;
+  /*
+  * Path following
+  */
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
+  float mMovementSpeed = 10.0f;
 
   ATorchAIController();
 
@@ -63,12 +92,20 @@ private:
   /** Animation instance */
   UAnimInstance* mAnimationInstance;
 
-  /** Path prediction */
-  FVector mDirectionTarget;
-  FTimerHandle mPredictionTimeHdl;
-  TArray<FTransform> mPath;
+  /** Behavior states */
+  EPathFindingState::Type mPathFindingState = EPathFindingState::None;
+  EPathFollowingState::Type mPathFollowingState = EPathFollowingState::None;
+  ESurfaceState::Type mSurfaceState = ESurfaceState::Grounded; // Currently grounded by default; needs ray evaluation
 
-  void PredictPath();
-  void FollowPath();
+  /** Path finding */
+  TArray<FPathSample> mPredictionSamples;
+  
+  /** Path following */
+  int32 mCurrentSampleIndex;
+  int32 mCurrentSegmentIndex;
+  float mCurrentInterpolTime;
+
+  void FindPath();
+  void FollowPath(float deltaTime);
   void DrawDebugGizmo();
 };

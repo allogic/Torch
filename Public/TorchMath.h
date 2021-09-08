@@ -5,6 +5,5 @@
 struct FMafh
 {
   static FVector ComputeOptimalSurfaceDirection(FVector target, FVector normal, FVector up);
-
-  static void EvaluateCatRom(const TArray<FVector>& points, uint32 numSamples, TArray<FVector>& samplePoints);
+  static FVector EvaluateCatRom(FVector p0, FVector p1, FVector p2, FVector p3, float time);
 };

@@ -2,19 +2,7 @@
 #include "DrawDebugHelpers.h"
 #include "TorchMath.h"
 
-bool FPathFinding::SamplePathAirborn(
-  UWorld* world,
-  FVector origin,
-  FVector target,
-  FQuat rotation,
-  int32 numSegments,
-  float sphereRadius,
-  FPathSample& sample,
-  bool debug)
-{
-  return false;
-}
-bool FPathFinding::SamplePathSurface(
+void FPathFinding::SampleOptimalPathAlongSurfaces(
   UWorld* world,
   FVector origin,
   FVector target,
@@ -25,7 +13,9 @@ bool FPathFinding::SamplePathSurface(
   float randomRotationItensity,
   float targetRotationItensity,
   FPathSample& sample,
-  bool debug)
+  FVector& normal,
+  bool enableDebug,
+  bool debugPersistence)
 {
   // Setup trace params
   FHitResult hitResult;
@@ -45,23 +35,29 @@ bool FPathFinding::SamplePathSurface(
     bool hit = world->SweepSingleByChannel(hitResult, origin, origin + rotation.GetForwardVector() * sphereRadius, rotation, traceChannel, collShape);
     if (hit)
     {
-      //normal = hitResult.Normal;
-      return true;
+      // Set hit normal
+      normal = hitResult.Normal;
+
+      // Apply escape rotation
+      FRotator r = rotation.Rotator();
+      r.Roll += FMath::RadiansToDegrees(FVector::DotProduct(rotation.GetRightVector(), normal));
+      FQuat targetRotation = r.Quaternion() * rotation.Inverse();
+      rotation += (targetRotation * rotation);
+      rotation.Normalize();
     }
     else
     {
       // Apply random rotation
-      //float noiseRotation = FMath::PerlinNoise3D(origin * 0.1f);
-      //float randomYaw = FMath::RandRange(-20.0f, 20.0f);
       FRotator r = rotation.Rotator();
       r.Yaw += randomSteeringAngle;
-      FQuat noiseRotationNew = r.Quaternion() * rotation.Inverse();
-      rotation += (noiseRotationNew * rotation) * randomRotationItensity;
+      FQuat randomRotationNew = r.Quaternion() * rotation.Inverse();
+      rotation += (randomRotationNew * rotation) * randomRotationItensity;
       rotation.Normalize();
 
       // Apply target rotation
+      float targetDirectionDistIntensity = (1.0f / numSegments) * segment;
       FQuat targetRotationDiff = targetDirection.Rotation().Quaternion() * rotation.Inverse();
-      rotation += (targetRotationDiff * rotation) * targetRotationItensity;
+      rotation += (targetRotationDiff * rotation) * targetDirectionDistIntensity * targetRotationItensity;
       rotation.Normalize();
 
       // March along forward
@@ -75,20 +71,19 @@ bool FPathFinding::SamplePathSurface(
       sample.Path.Emplace(FTransform{ rotation, origin });
 
       // Draw some debugs
-      if (debug)
+      if (enableDebug)
       {
         if (segment % 2 == 0)
         {
-          DrawDebugBox(world, origin, FVector{ 10.0f, 44.0f, 44.0f }, rotation, FColor::White, false);
+          DrawDebugBox(world, origin, FVector{ 10.0f, 44.0f, 44.0f }, rotation, FColor{ 255, 255, 255, 64 }, debugPersistence);
         }
         else
         {
-          DrawDebugLine(world, origin, origin + rotation.GetRightVector() * 200.0f, FColor::Red);
-          DrawDebugLine(world, origin, origin + rotation.GetUpVector() * 200.0f, FColor::Green);
-          DrawDebugLine(world, origin, origin + rotation.GetForwardVector() * 200.0f, FColor::Blue);
+          DrawDebugLine(world, origin, origin + rotation.GetRightVector() * 200.0f, FColor::Red, debugPersistence);
+          DrawDebugLine(world, origin, origin + rotation.GetUpVector() * 200.0f, FColor::Green, debugPersistence);
+          DrawDebugLine(world, origin, origin + rotation.GetForwardVector() * 200.0f, FColor::Blue, debugPersistence);
         }
       }
     }
   }
-  return false;
 }
