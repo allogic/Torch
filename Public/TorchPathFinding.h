@@ -10,6 +10,13 @@ struct FPathSample
   inline bool operator < (const FPathSample& other) const { return DistanceToTarget < other.DistanceToTarget; }
 };
 
+struct FFlowMapNode
+{
+  FVector Origin;
+  FVector Direction;
+  float Force;
+};
+
 struct FPathFinding
 {
   static void SampleOptimalPathAlongSurfaces(
@@ -24,6 +31,16 @@ struct FPathFinding
     float targetRotationItensity,
     FPathSample& sample,
     FVector& normal,
+    bool enableDebug,
+    bool debugPersistence);
+
+  static void SampleFlowMap(
+    UWorld* world,
+    FVector origin,
+    int32 gridSize,
+    float cellSize,
+    const TArray<FTransform>& currentPath,
+    TArray<FFlowMapNode>& flowMapNodes,
     bool enableDebug,
     bool debugPersistence);
 };

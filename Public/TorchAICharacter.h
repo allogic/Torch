@@ -37,9 +37,9 @@ protected:
   void OnEndOverlap(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex);
 
 private:
-  ATorchAIController* mAIController;
   TArray<AActor*> mPerceivingActors;
   UAnimInstance* mAnimationInstance;
 
+  void SyncAnimation();
   void DrawDebugGizmo();
 };

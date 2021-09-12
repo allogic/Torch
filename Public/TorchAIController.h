@@ -1,21 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AIController.h"
+#include "GameFramework/Controller.h"
 #include "TorchPathFinding.h"
 #include "TorchAIController.generated.h"
 
 class UNavigationSystemV1;
 class ATorchAICharacter;
 
-namespace EPathFindingState
-{
-  enum Type
-  {
-    None,
-    Found,
-  };
-}
 namespace EPathFollowingState
 {
   enum Type
@@ -36,7 +28,7 @@ namespace ESurfaceState
 }
 
 UCLASS()
-class TORCH_API ATorchAIController : public AAIController
+class TORCH_API ATorchAIController : public AController
 {
   GENERATED_BODY()
 
@@ -45,21 +37,21 @@ public:
   * Debugging
   */
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchDebug)
   bool mEnableDebug = true;
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  bool mDebugPersistence = true;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchDebug)
+  bool mDebugPersistence = false;
 
   /*
   * Path finding
   */
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  int32 mNumPredictions = 3;
+  int32 mNumSamples = 2;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  int32 mNumSubPredictions = 10;
+  int32 mNumSubSamples = 10;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
   float mNumPathSegments = 32;
@@ -71,10 +63,16 @@ public:
   float mTraceSphereRadius = 22.0f;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  float mRandomRotationIntensity = 1.5f;
+  float mRandomRotationIntensity = 0.2f;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
-  float mTargetRotationIntensity = 0.25f;
+  float mTargetRotationIntensity = 0.1f;
+
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
+  int32 mFlowMapGridSize = 10;
+
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchPathFinding)
+  float mFlowMapCellSize = 100.0f;
 
   /*
   * Path following
@@ -88,24 +86,29 @@ protected:
   virtual void BeginPlay() override;
   virtual void Tick(float deltaTime) override;
 
+  void PhysicsTick(float deltaTime, FBodyInstance* bodyInstance);
+
 private:
   /** Animation instance */
   UAnimInstance* mAnimationInstance;
 
   /** Behavior states */
-  EPathFindingState::Type mPathFindingState = EPathFindingState::None;
   EPathFollowingState::Type mPathFollowingState = EPathFollowingState::None;
-  ESurfaceState::Type mSurfaceState = ESurfaceState::Grounded; // Currently grounded by default; needs ray evaluation
+  ESurfaceState::Type mSurfaceState = ESurfaceState::Grounded; // Currently grounded by default; needs body evaluation
 
   /** Path finding */
-  TArray<FPathSample> mPredictionSamples;
-  
-  /** Path following */
-  int32 mCurrentSampleIndex;
-  int32 mCurrentSegmentIndex;
-  float mCurrentInterpolTime;
+  TArray<FPathSample> mPathSamples;
+  TArray<FTransform> mCurrentPath;
 
-  void FindPath();
-  void FollowPath(float deltaTime);
+  /** Path following */
+  TArray<FFlowMapNode> mFlowMapNodes;
+
+  /** Physic specific */
+  FCalculateCustomPhysics mOnCalculateCustomPhysics;
+
+  void ComputePath();
+  void ComputeFlowMap();
+
+  void FollowPath(FBodyInstance* bodyInstance);
   void DrawDebugGizmo();
 };

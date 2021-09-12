@@ -2,9 +2,8 @@
 #include "NavigationSystem.h"
 #include "DrawDebugHelpers.h"
 #include "TorchAICharacter.h"
-#include "TorchMath.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Components/SplineComponent.h"
+#include "Components/CapsuleComponent.h"
 
 ATorchAIController::ATorchAIController()
 {
@@ -14,22 +13,31 @@ ATorchAIController::ATorchAIController()
 void ATorchAIController::BeginPlay()
 {
   Super::BeginPlay();
+
+  // Subscribe to custom physics
+  mOnCalculateCustomPhysics.BindUObject(this, &ATorchAIController::PhysicsTick);
 }
 void ATorchAIController::Tick(float deltaTime)
 {
-  // Switch path finding behavior
-  switch (mPathFindingState)
-  {
-    case EPathFindingState::None:
-    {
-      FindPath();
-    }
-    case EPathFindingState::Found:
-    {
-      break;
-    }
-  }
+  Super::Tick(deltaTime);
 
+  // Get some samples
+  ComputePath();
+
+  mCurrentPath = mPathSamples[0].Path; // Find algortihm for me
+
+  // Get flow-map nodes
+  ComputeFlowMap();
+
+  // Enable physics sub-stepping
+  ACharacter* character = GetCharacter();
+  if (character)
+  {
+    character->GetCapsuleComponent()->GetBodyInstance()->AddCustomPhysics(mOnCalculateCustomPhysics);
+  }
+}
+void ATorchAIController::PhysicsTick(float deltaTime, FBodyInstance* bodyInstance)
+{
   // Switch path following behavior
   switch (mPathFollowingState)
   {
@@ -44,13 +52,14 @@ void ATorchAIController::Tick(float deltaTime)
     }
     case EPathFollowingState::Moving:
     {
-      FollowPath(deltaTime);
+      // Follow path
+      FollowPath(bodyInstance);
       break;
     }
   }
 }
 
-void ATorchAIController::FindPath()
+void ATorchAIController::ComputePath()
 {
   ACharacter* character = GetCharacter();
   UWorld* world = GetWorld();
@@ -63,11 +72,11 @@ void ATorchAIController::FindPath()
     FVector normal = character->GetActorUpVector();
     FVector right = character->GetActorRightVector();
 
-    // Clear old predictions
-    mPredictionSamples.Empty();
+    // Clear old samples
+    mPathSamples.Empty();
 
     // Begin sampling
-    for (int32 sample = 0; sample < mNumPredictions; ++sample)
+    for (int32 sample = 0; sample < mNumSamples; ++sample)
     {
       // Switch behavior based on different environmental properties
       switch (mSurfaceState)
@@ -75,10 +84,10 @@ void ATorchAIController::FindPath()
         case ESurfaceState::Grounded:
         {
           // Begin sub sampling
-          for (int32 subSample = 0; subSample <= mNumSubPredictions; ++subSample)
+          for (int32 subSample = 0; subSample <= mNumSubSamples; ++subSample)
           {
             // Get current view angle
-            float randomSteeringAngle = subSample * ((mViewAngle * 2.0f) / mNumSubPredictions) - mViewAngle;
+            float randomSteeringAngle = subSample * ((mViewAngle * 2.0f) / mNumSubSamples) - mViewAngle;
 
             // Sample path
             FPathFinding::SampleOptimalPathAlongSurfaces(
@@ -90,28 +99,25 @@ void ATorchAIController::FindPath()
               mTraceSphereRadius,
               randomSteeringAngle,
               mRandomRotationIntensity, mTargetRotationIntensity,
-              mPredictionSamples[mPredictionSamples.Emplace()],
+              mPathSamples[mPathSamples.Emplace()],
               normal,
               mEnableDebug,
               mDebugPersistence);
           }
 
           // Choose best sub-path to continue on
-          mPredictionSamples.Sort();
+          mPathSamples.Sort();
 
-          // Validate prediction results
-          if (mPredictionSamples.Num() > 0)
+          // Validate samples
+          if (mPathSamples.Num() > 0)
           {
-            TArray<FTransform>& optimalPath = mPredictionSamples[0].Path;
-            if (optimalPath.Num() > 0)
+            int32 optimalIndex = 0;
+            if (mPathSamples[optimalIndex].Path.Num() > 0)
             {
               // Promote new origin and rotation
-              origin = optimalPath[optimalPath.Num() - 1].GetLocation();
-              rotation = optimalPath[optimalPath.Num() - 1].GetRotation().Rotator();
+              origin = mPathSamples[optimalIndex].Path[mPathSamples[optimalIndex].Path.Num() - 1].GetLocation();
+              rotation = mPathSamples[optimalIndex].Path[mPathSamples[optimalIndex].Path.Num() - 1].GetRotation().Rotator();
             }
-
-            // Change behavior to found
-            mPathFindingState = EPathFindingState::Found;
           }
         }
         case ESurfaceState::Airborne:
@@ -122,48 +128,44 @@ void ATorchAIController::FindPath()
     }
   }
 }
-void ATorchAIController::FollowPath(float deltaTime)
+void ATorchAIController::ComputeFlowMap()
 {
-  // Setup path following
   ACharacter* character = GetCharacter();
-  if (character)
+  UWorld* world = GetWorld();
+  if (character && world)
   {
-    // Currently linearly interpolate between samples (also test physics based approach)
-    FVector sampleLocation = FMath::Lerp(
-      mPredictionSamples[mCurrentSampleIndex].Path[mCurrentSegmentIndex].GetLocation(),
-      mPredictionSamples[mCurrentSampleIndex].Path[mCurrentSegmentIndex + 1].GetLocation(),
-      deltaTime);
-    FQuat sampleRotation = FMath::Lerp(
-      mPredictionSamples[mCurrentSampleIndex].Path[mCurrentSegmentIndex].GetRotation(),
-      mPredictionSamples[mCurrentSampleIndex].Path[mCurrentSegmentIndex + 1].GetRotation(),
-      deltaTime);
-
-    // Set new location and rotation
-    character->SetActorLocationAndRotation(sampleLocation, sampleRotation);
-
-    // Check if we close to desired time
-    mCurrentInterpolTime += mMovementSpeed * deltaTime;
-    if (mCurrentInterpolTime >= 1.0f)
-    {
-      // Reset interpolation time
-      mCurrentInterpolTime = 0.0f;
-
-      // Keep everything in bounds
-      mCurrentSegmentIndex++;
-      if (mCurrentSegmentIndex >= mPredictionSamples[mCurrentSampleIndex].Path.Num() - 1)
-      {
-        // Reset segment index
-        mCurrentSegmentIndex = 0;
-
-        //mCurrentSampleIndex++;
-        //if (mCurrentSampleIndex > mPredictionSamples.Num() - 1)
-        //{
-        //  // Reset sample index
-        //  mCurrentSampleIndex = 0;
-        //}
-      }
-    }
+    FPathFinding::SampleFlowMap(
+      world,
+      character->GetActorLocation(),
+      mFlowMapGridSize,
+      mFlowMapCellSize,
+      mCurrentPath,
+      mFlowMapNodes,
+      mEnableDebug,
+      mDebugPersistence
+    );
   }
+}
+
+void ATorchAIController::FollowPath(FBodyInstance* bodyInstance)
+{
+  // TODO: try spherical GPU depth map
+
+  // Currently linearly interpolate between samples (also test physics based approach)
+  //FVector sampleLocation = FMath::Lerp(
+  //  mPathSamples[mCurrentPathIndex].Path[mCurrentSegmentIndex].GetLocation(),
+  //  mPathSamples[mCurrentPathIndex].Path[mCurrentSegmentIndex + 1].GetLocation(),
+  //  0.0f);
+  //FQuat sampleRotation = FMath::Lerp(
+  //  mPathSamples[mCurrentPathIndex].Path[mCurrentSegmentIndex].GetRotation(),
+  //  mPathSamples[mCurrentPathIndex].Path[mCurrentSegmentIndex + 1].GetRotation(),
+  //  0.0f);
+
+  // Set new location and rotation
+  //character->SetActorLocationAndRotation(sampleLocation, sampleRotation);
+
+  // Apply direction force
+  bodyInstance->AddForce(FVector::RightVector, false);
 }
 
 void ATorchAIController::DrawDebugGizmo()

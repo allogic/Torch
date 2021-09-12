@@ -2,13 +2,11 @@
 #include "DrawDebugHelpers.h"
 #include "TorchAIController.h"
 #include "Components/SphereComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 ATorchAICharacter::ATorchAICharacter()
 {
-  // Set mesh collision channel
-  GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
-
   // Setup sight system
   mHeadLocation = CreateDefaultSubobject<USceneComponent>(TEXT("HeadLocation"));
   mHeadLocation->SetupAttachment(RootComponent);
@@ -27,38 +25,22 @@ void ATorchAICharacter::BeginPlay()
 {
   Super::BeginPlay();
 
-  // Setup AI controller
-  mAIController = Cast<ATorchAIController>(GetController());
+  // Set collision channels
+  GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+  mPerceptionSphere->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
+  GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel1, ECollisionResponse::ECR_Ignore);
 
   // Setup animation instance
   mAnimationInstance = GetMesh()->GetAnimInstance();
-
-  if (mAIController)
-  {
-    //mAIController->MoveToRandomLocation();
-  }
 }
 void ATorchAICharacter::Tick(float deltaTime)
 {
   Super::Tick(deltaTime);
 
-  // Update animation blueprint variables
-  if (mAnimationInstance)
-  {
-    FFloatProperty* direction = FindFProperty<FFloatProperty>(mAnimationInstance->GetClass(), TEXT("Direction"));
-    FFloatProperty* speed = FindFProperty<FFloatProperty>(mAnimationInstance->GetClass(), TEXT("Speed"));
+  // Sync animations to physics
+  SyncAnimation();
 
-    if (direction)
-    {
-      direction->SetPropertyValue_InContainer(mAnimationInstance, GetCharacterMovement()->Velocity.X);
-    }
-    if (speed)
-    {
-      speed->SetPropertyValue_InContainer(mAnimationInstance, GetCharacterMovement()->Velocity.Y);
-    }
-  }
-
-  // Conditionally show debug gizmos
+  // Draw some gizmos
   if (mDrawDebugGizmo)
   {
     DrawDebugGizmo();
@@ -84,9 +66,28 @@ void ATorchAICharacter::OnEndOverlap(UPrimitiveComponent* overlappedComponent, A
   GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::White, FString::FromInt(mPerceivingActors.Num()));
 }
 
+void ATorchAICharacter::SyncAnimation()
+{
+  // Update animation blueprint variables
+  if (mAnimationInstance)
+  {
+    FFloatProperty* direction = FindFProperty<FFloatProperty>(mAnimationInstance->GetClass(), TEXT("Direction"));
+    FFloatProperty* speed = FindFProperty<FFloatProperty>(mAnimationInstance->GetClass(), TEXT("Speed"));
+
+    if (direction)
+    {
+      direction->SetPropertyValue_InContainer(mAnimationInstance, GetCharacterMovement()->Velocity.X);
+    }
+    if (speed)
+    {
+      speed->SetPropertyValue_InContainer(mAnimationInstance, GetCharacterMovement()->Velocity.Y);
+    }
+  }
+}
 void ATorchAICharacter::DrawDebugGizmo()
 {
-  if (mAIController)
+  AController* controller = GetController();
+  if (controller)
   {
     // Draw local forward location
     //DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + GetActorForwardVector(), FColor::Blue, false);
