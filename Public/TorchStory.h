@@ -2,17 +2,29 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "TorchGod.generated.h"
+#include "TorchStory.generated.h"
+
+class ATorchStoryTask;
 
 UCLASS()
-class TORCH_API ATorchGod : public AActor
+class TORCH_API ATorchStory : public AActor
 {
   GENERATED_BODY()
-  
+
 public:
-  ATorchGod();
+
+  ATorchStory();
 
 protected:
+
   virtual void BeginPlay() override;
   virtual void Tick(float deltaTime) override;
+
+private:
+
+  /*
+  * Story system
+  */
+
+  TArray<AActor*> mStoryActors = {};
 };

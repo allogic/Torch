@@ -1,13 +1,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-
 #include "GameFramework/GameModeBase.h"
-
-#include "TorchGameModeBase.generated.h"
+#include "TorchGameMode.generated.h"
 
 UCLASS()
-class TORCH_API ATorchGameModeBase : public AGameModeBase
+class ATorchGameMode : public AGameModeBase
 {
   GENERATED_BODY()
+
+public:
+
+  ATorchGameMode();
 };
