@@ -1,4 +1,4 @@
 #include "Torch.h"
 #include "Modules/ModuleManager.h"
 
-IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, Torch, "Torch" );
+IMPLEMENT_PRIMARY_GAME_MODULE(FDefaultGameModuleImpl, Torch, "Torch");

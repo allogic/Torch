@@ -116,3 +116,21 @@ void FTorchBSP::Destroy(
     node = nullptr;
   }
 }
+
+void FTorchBSP::QueryChildren(
+  FBSPNode* node,
+  TArray<FBSPNode*>& children)
+{
+  if (node)
+  {
+    if (node->IsEnd)
+    {
+      children.Emplace(node);
+    }
+    else
+    {
+      QueryChildren(node->LeafLeft, children);
+      QueryChildren(node->LeafRight, children);
+    }
+  }
+}

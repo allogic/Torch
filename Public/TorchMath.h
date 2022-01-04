@@ -7,11 +7,10 @@ struct FTorchMath
   static FVector RandomInsideUnitCircle();
   static FVector RandomInsideUnitSphere();
 
-  static FTransform LookAt(const FVector& source, const FVector& target, const FVector& up = FVector::UpVector);
-  static FQuat RelativeRotation(const FQuat& source, const FQuat& target);
+  static FVector RandomInsideRect(const FVector& location, const FVector& size);
 
-  static FVector ComputeOptimalSurfaceDirection(const FVector& target, const FVector& normal, const FVector& up);
-  static FVector EvaluateCatRom(const FVector& p0, const FVector& p1, const FVector& p2, const FVector& p3, float time);
+  static FVector CatmullRom(const FVector& p0, const FVector& p1, const FVector& p2, const FVector& p3, float t);
+  static FVector CubicBezier(const FVector& p0, const FVector& c0, const FVector& c1, const FVector& p1, float t);
 
   static float RemapValue(float value, float low0, float high0, float low1, float high1);
 };

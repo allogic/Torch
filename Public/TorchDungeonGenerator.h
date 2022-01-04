@@ -7,7 +7,10 @@
 class UStaticMesh;
 class UInstancedStaticMeshComponent;
 class UTexture2D;
+
 class ATorchHUD;
+class ATorchAICharacter;
+class ATorchScaredLight;
 
 struct FBSPNode;
 
@@ -21,12 +24,32 @@ namespace EDirection
     East,
   };
 }
+namespace EBlockType
+{
+  enum Type : int32
+  {
+    Air,
+    Ground,
+    Wall,
+    WallCorner,
+  };
+}
 
 struct FCell
 {
-  int32 BlockID;
+  EBlockType::Type BlockType;
   bool IsSolid;
   FVector Location;
+  FRotator Rotation;
+};
+struct FTileInstance
+{
+  UStaticMesh* mStaticMesh;
+  UInstancedStaticMeshComponent* mInstancedStaticMesh;
+
+  void ClearInstances();
+  void Initialize(UObject* object, UStaticMesh* staticMesh, const FString& tileName);
+  void AddRandomInstance(const FVector& location, const FRotator& rotation, const FVector& scale);
 };
 
 UCLASS()
@@ -46,8 +69,8 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchGenerator)
   int32 mHeight = 128;
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchBuilder)
-  FVector mTileSpacing = FVector{ 100.0f, 100.0f, 1.0f };
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchGenerator)
+  FVector mTileScale = FVector{ 100.0f, 100.0f, 1.0f };
 
   /*
   * Random walker
@@ -76,20 +99,24 @@ public:
   int32 mBSPTreeDepth = 10;
 
   /*
-  * Dungeon builder
+  * Light spawner
   */
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchBuilder)
-  TObjectPtr<UStaticMesh> mFloorMesh;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchLightSpawner)
+  TSubclassOf<ATorchScaredLight> mDefaultLight;
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchBuilder)
-  TObjectPtr<UStaticMesh> mWallMesh;
+  /*
+  * Mob spawner
+  */
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchBuilder)
-  TObjectPtr<UMaterial> mFloorMaterial;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMobSpawner)
+  int32 mMobCount = 3;
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchBuilder)
-  TObjectPtr<UMaterial> mWallMaterial;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMobSpawner)
+  float mRoomSelectionChance = 1.0f;
+
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMobSpawner)
+  TSubclassOf<ATorchAICharacter> mDefaultMob;
 
 public:
 
@@ -107,29 +134,66 @@ private:
   * Dungeon generator
   */
 
-  TArray<FCell> mGrid = {};
+  TArray<FCell> mPrevCells = {};
+  TArray<FCell> mCurrCells = {};
   FBSPNode* mBSPTree = nullptr;
+  TArray<FBSPNode*> mLightSpawnRooms = {};
+  TArray<FBSPNode*> mMobSpawnRooms = {};
+  TArray<FBSPNode*> mPlayerSpawnRooms = {};
   TMap<int32, FColor> mColors = {};
 
   void GenerateDungeon();
 
-  void CopyRandomWalkIDToBlockID(int32 iterations);
-  void CopyChildRoomIDToBlockID(FBSPNode* node);
-  void CopyHierarchicalRoomConnectionsToBlockID(FBSPNode* node);
+  void RandomWalkToBlockType(int32 iterations);
+  void ChildRoomsToBlockType(FBSPNode* node);
+  void HierarchicalRoomConnectionsToBlockType(FBSPNode* node);
 
   int32 GetRandomNonSolidCellIndex();
+  bool CompareMask(const FVector& location, const TArray<int32>& mask);
+
+  void DetectWalls();
+  void DetectCorners();
+
+private:
+  
+  /*
+  * Light spawner
+  */
+
+  void SpawnLights(const TArray<FBSPNode*>& rooms);
 
 private:
 
   /*
-  * Mesh instancing
+  * Mob spawner
   */
 
-  UInstancedStaticMeshComponent* mInstancedFloorMesh = nullptr;
-  UInstancedStaticMeshComponent* mInstancedWallMesh = nullptr;
+  void SpawnMobs(const TArray<FBSPNode*>& rooms);
 
-  void RebuildMesh();
-  void BuildLayer(const FVector& location, const FVector& size, const FVector& layerScale = FVector{ 0.0f });
+private:
+
+  /*
+  * Spawn player
+  */
+
+  void SpawnPlayer(const TArray<FBSPNode*>& rooms);
+
+private:
+
+  /*
+  * Tile instances
+  */
+
+  FTileInstance mTileInstanceGround1 = {};
+  FTileInstance mTileInstanceWall1 = {};
+  FTileInstance mTileInstanceWallCorner1 = {};
+  
+  void ClearAllInstances();
+
+  void BuildAllInstances();
+  void BuildAllCandles();
+
+private:
 
   /*
   * Debugging
@@ -142,5 +206,5 @@ private:
   void SetColor(int32 x, int32 y, const FColor& color);
   void FillColor(FVector location, FVector size, const FColor& color);
 
-  void ConvertBlockIDToColor();
+  void ConvertBlockTypeToColor();
 };

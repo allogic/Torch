@@ -4,7 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "TorchMobSpawner.generated.h"
 
-class ATorchCharacter;
+class ATorchAICharacter;
 
 UCLASS()
 class TORCH_API ATorchMobSpawner : public AActor
@@ -25,13 +25,13 @@ public:
   */
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchSpawner)
-  int32 mMobCount;
+  int32 mMobCount = 1;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchSpawner)
-  float mSpawnRadius;
+  float mSpawnRadius = 100.0f;
 
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchSpawner)
-  TSubclassOf<ATorchCharacter> mDefaultMob;
+  TSubclassOf<ATorchAICharacter> mDefaultMob = nullptr;
 
 public:
 

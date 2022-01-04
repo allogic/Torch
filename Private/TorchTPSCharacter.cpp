@@ -6,14 +6,13 @@
 #include "TorchMath.h"
 #include "TorchCore.h"
 #include "TorchWeapon.h"
-#include "TorchSkeleton.h"
 #include "TorchDebug.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Materials/MaterialParameterCollectionInstance.h"
 
-ATorchTPSCharacter::ATorchTPSCharacter(const FObjectInitializer& initializer)
+ATorchTPSCharacter::ATorchTPSCharacter()
 {
   // Setup actor
   PrimaryActorTick.bCanEverTick = true;
@@ -307,11 +306,11 @@ void ATorchTPSCharacter::UpdateHandIK()
 
   if (mCurrentWeaponActor)
   {
-    handJointTargetLocationL = GetActorRotation().RotateVector(mCurrentWeaponActor->GetHandJointTargetLocationL());
-    handJointTargetLocationR = GetActorRotation().RotateVector(mCurrentWeaponActor->GetHandJointTargetLocationR());
+    //handJointTargetLocationL = GetActorRotation().RotateVector(mCurrentWeaponActor->GetHandJointTargetLocationL());
+    //handJointTargetLocationR = GetActorRotation().RotateVector(mCurrentWeaponActor->GetHandJointTargetLocationR());
 
-    handLocationL = GetActorRotation().RotateVector(mCurrentWeaponActor->GetRestLocationL());
-    handLocationR = GetActorRotation().RotateVector(mCurrentWeaponActor->GetRestLocationR());
+    //handLocationL = GetActorRotation().RotateVector(mCurrentWeaponActor->GetRestLocationL());
+    //handLocationR = GetActorRotation().RotateVector(mCurrentWeaponActor->GetRestLocationR());
   }
   else
   {
@@ -363,8 +362,9 @@ void ATorchTPSCharacter::UpdateCamera()
       FRotationMatrix rotationMatrix = FRotator{ mCameraRotation.Pitch, mUpperBodyRotationTarget.Yaw, 0.0f };
       FVector cameraRight = rotationMatrix.Rotator().RotateVector(FVector::RightVector);
       FVector cameraUp = rotationMatrix.Rotator().RotateVector(FVector::UpVector);
-      mCameraRotation = FRotationMatrix::MakeFromXY(cameraRight, cameraUp).Rotator();
-      mCameraLocation = mCameraRotation.RotateVector(mCameraOrbitLocation);
+      mCameraRotation = FRotationMatrix::MakeFromYZ(cameraRight, cameraUp).Rotator();
+      mCameraRotation.Yaw += 90.0f;
+      mCameraLocation = GetActorRotation().RotateVector(mCameraOrbitLocation);
     }
 
     mCameraComponent->SetWorldLocation(GetActorLocation() + mCameraLocation);
@@ -420,19 +420,19 @@ void ATorchTPSCharacter::UpdateWeapon()
       //FVector weaponUp = mAimUp * mCurrentWeaponActor->GetAimOffset().Y;
       //FVector weaponForward = mAimForward * mCurrentWeaponActor->GetAimOffset().Z; // Add in Z correction
 
-      FVector weaponRight = GetMesh()->GetBoneAxis(TEXT("spine_03"), EAxis::Z) * mCurrentWeaponActor->GetAimOffset().X;
-      FVector weaponUp = GetMesh()->GetBoneAxis(TEXT("spine_03"), EAxis::X) * mCurrentWeaponActor->GetAimOffset().Y;
+      //FVector weaponRight = GetMesh()->GetBoneAxis(TEXT("spine_03"), EAxis::Z) * mCurrentWeaponActor->GetAimOffset().X;
+      //FVector weaponUp = GetMesh()->GetBoneAxis(TEXT("spine_03"), EAxis::X) * mCurrentWeaponActor->GetAimOffset().Y;
       //FVector weaponForward = GetMesh()->GetBoneAxis(TEXT("spine_03"), EAxis::Y) * mCurrentWeaponActor->GetAimOffset().Z;
 
       FVector weaponPivot = GetActorRotation().RotateVector(mCameraAimLocation); // Add in spine Z motion
       //FVector weaponLocation = weaponPivot + weaponRight + weaponUp + weaponForward;
-      FVector weaponLocation = spine3Location + weaponUp;
+      //FVector weaponLocation = spine3Location + weaponUp;
 
       //DrawDebugSphere(GetWorld(), GetActorLocation() + weaponPivot, 10.0f, 16, FColor::Red);
       //DrawDebugSphere(GetWorld(), GetActorLocation() + weaponLocation, 10.0f, 16, FColor::Red);
 
-      mCurrentWeaponActor->SetActorLocation(GetActorLocation() + weaponLocation);
-      mCurrentWeaponActor->SetActorRelativeRotation(FRotator{ 0.0f, 0.0f, -mCameraRotation.Pitch });
+      //mCurrentWeaponActor->SetActorLocation(GetActorLocation() + weaponLocation);
+      //mCurrentWeaponActor->SetActorRelativeRotation(FRotator{ 0.0f, 0.0f, -mCameraRotation.Pitch });
     }
     else
     {

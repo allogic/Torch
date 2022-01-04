@@ -1,9 +1,9 @@
 #include "TorchMobSpawner.h"
 #include "DrawDebugHelpers.h"
 #include "TorchMath.h"
-#include "TorchAIController.h"
+#include "TorchAICharacter.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
-#include "TorchCharacter.h"
+#include "TorchAICharacter.h"
 
 ATorchMobSpawner::ATorchMobSpawner()
 {
@@ -29,7 +29,7 @@ void ATorchMobSpawner::BeginPlay()
         DrawDebugSphere(GetWorld(), GetActorLocation() + location, 100.0f, 32, FColor::Red, false, 1.0f);
       }
 
-      ATorchCharacter* character = Cast<ATorchCharacter>(UAIBlueprintHelperLibrary::SpawnAIFromClass(GetWorld(), mDefaultMob, nullptr, GetActorLocation() + location, FRotator{}));
+      ATorchAICharacter* character = Cast<ATorchAICharacter>(UAIBlueprintHelperLibrary::SpawnAIFromClass(GetWorld(), mDefaultMob, nullptr, GetActorLocation() + location, FRotator{}));
       if (character)
       {
         

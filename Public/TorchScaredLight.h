@@ -21,6 +21,9 @@ public:
   UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchLight)
   float mFlickerIntensity = 1.0f;
 
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchLight)
+  FLinearColor mLightColor = FLinearColor{};
+
   /*
   * Sub components
   */
@@ -36,10 +39,4 @@ protected:
 
   virtual void BeginPlay() override;
   virtual void Tick(float deltaTime) override;
-
-  /*
-  * Light system
-  */
-
-  FLinearColor mLightColor = FLinearColor{};
 };

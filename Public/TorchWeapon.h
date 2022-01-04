@@ -5,8 +5,12 @@
 #include "TorchWeapon.generated.h"
 
 class USphereComponent;
-class ATorchTPSCharacter;
 class USceneComponent;
+class UAudioComponent;
+class UBoxComponent;
+class UStaticMeshComponent;
+
+class ATorchTPSCharacter;
 
 UCLASS()
 class TORCH_API ATorchWeapon : public AActor
@@ -16,24 +20,24 @@ class TORCH_API ATorchWeapon : public AActor
 public:
 
   /*
-  * Debugging
+  * Components
   */
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchDebug)
-  bool mEnableDebug = true;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchComponent)
+  USphereComponent* mPerceptionSphereComponent = nullptr;
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchDebug)
-  bool mDebugPersistence = false;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchComponent)
+  USceneComponent* mMeshGroupComponent = nullptr;
+
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchComponent)
+  UAudioComponent* mAudioComponent = nullptr;
 
   /*
-  * Sub components
+  * Sub meshes
   */
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchComponents)
-  USphereComponent* mEquipmentSphereComponent = nullptr;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchComponents)
-  USceneComponent* mMeshGroupComponent = nullptr;
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchSubMeshes)
+  TArray<UStaticMeshComponent*> mStaticMeshes = {};
 
   /*
   * Equipment system
@@ -45,31 +49,9 @@ public:
 public:
 
   /*
-  * Inverse hand kinematic
+  * Weapon system
   */
 
-  virtual FVector GetAimOffset() const { return FVector{}; }
-
-  virtual FVector GetHandJointTargetLocationL() const { return FVector{}; }
-  virtual FVector GetHandJointTargetLocationR() const { return FVector{}; }
-
-  virtual FVector GetRestLocationL() const { return FVector{}; }
-  virtual FVector GetRestLocationR() const { return FVector{}; }
-
-  virtual FVector GetAimLocation() const { return FVector{}; }
-
-  virtual FVector GetHandLocationL() const { return FVector{}; }
-  virtual FRotator GetHandRotationL() const { return FRotator{}; }
-  
-  virtual FVector GetHandLocationR() const { return FVector{}; }
-  virtual FRotator GetHandRotationR() const { return FRotator{}; }
-
-  /*
-  * Firing system
-  */
-
-  virtual float GetFireRate() const { return 1.0f; }
-  virtual FVector GetBulletSpawnLocation() const { return FVector{}; }
   void EnableFire() { mIsFiring = true; }
   void DisableFire() { mIsFiring = false; }
 
@@ -79,35 +61,51 @@ public:
 
 protected:
 
+  virtual void BeginPlay() override;
   virtual void Tick(float deltaTime) override;
 
-  /*
-  * Timing system
-  */
-
-  virtual void SetupTimers(float fireRate);
-
-private:
-
-  /*
-  * Timing system
-  */
-
-  FTimerDelegate mTimerDelegateFireRateDecay;
-  FTimerHandle mTimerHandleFireRateDecay;
-
-  bool mIsFiring = false;
-  bool mCanFire = true;
-
-  UFUNCTION()
-  void UpdateFireRateDecay();
+public:
 
   /*
   * Equipment system
   */
 
-  ATorchTPSCharacter* mTPSCharacter;
+  virtual void OnAttach();
+  virtual void OnDetach();
 
-  UFUNCTION()
-  void OnBeginOverlap(UPrimitiveComponent* overlappedComponent, AActor* otherActor, UPrimitiveComponent* otherComp, int32 otherBodyIndex, bool bFromSweep, const FHitResult& sweepResult);
+protected:
+
+  /*
+  * Helper utilities
+  */
+
+  void AddStaticMeshToGroup(const FString& meshName, UStaticMesh* staticMesh);
+
+protected:
+
+  /*
+  * Weapon system
+  */
+
+  bool mIsFiring = false;
+  float mCurrFireRateDecay = 1.0f;
+
+  virtual float GetFireRate() const { return 0.0f; }
+
+public:
+
+  /*
+  * IK system
+  */
+
+  virtual FVector GetRelativeLocation() { return FVector{}; }
+  virtual FRotator GetRelativeRotation() { return FRotator{}; }
+
+private:
+
+  /*
+  * Sound system
+  */
+
+  USoundWave* mSound = nullptr;
 };

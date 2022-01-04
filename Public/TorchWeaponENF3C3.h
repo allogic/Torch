@@ -4,8 +4,6 @@
 #include "TorchWeapon.h"
 #include "TorchWeaponENF3C3.generated.h"
 
-class UStaticMeshComponent;
-
 UCLASS()
 class TORCH_API ATorchWeaponENF3C3 : public ATorchWeapon
 {
@@ -14,92 +12,21 @@ class TORCH_API ATorchWeaponENF3C3 : public ATorchWeapon
 public:
 
   /*
-  * Timing system
+  * Settings
   */
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchTiming)
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchSettings)
   float mFireRate = 0.5f;
 
   /*
-  * Inverse hand kinematic
+  * IK system
   */
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FVector mAimOffset = FVector{ 0.0f, 0.0f, 50.0f };
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchIK)
+  FVector mRelativeLocationOffset = FVector{ -0.509159f, -3.112507f, 21.534008f };
 
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FVector mHandJointTargetLocationL = FVector{};
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FVector mHandJointTargetLocationR = FVector{};
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FVector mRestLocationL = FVector{};
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FVector mRestLocationR = FVector{};
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FVector mAimLocation = FVector{};
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FVector mHandLocationL = FVector{};
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FRotator mHandRotationL = FRotator{ 180.0f, 0.0f, -45.0f };
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FVector mHandLocationR = FVector{};
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchHandIK)
-  FRotator mHandRotationR = FRotator{};
-
-  /*
-  * Sub components
-  */
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMeshes)
-  UStaticMeshComponent* mGlassMeshComponent = nullptr;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMeshes)
-  UStaticMeshComponent* mHandGripMeshComponent = nullptr;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMeshes)
-  UStaticMeshComponent* mSidesMeshComponent = nullptr;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMeshes)
-  UStaticMeshComponent* mFrontMeshComponent = nullptr;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMeshes)
-  UStaticMeshComponent* mDetailMeshComponent = nullptr;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMeshes)
-  UStaticMeshComponent* mBodyMeshComponent = nullptr;
-
-  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchMeshes)
-  UStaticMeshComponent* mBarrelMeshComponent = nullptr;
-
-public:
-
-  /*
-  * Inverse hand kinematic
-  */
-
-  FVector GetAimOffset() const override { return mAimOffset; }
-
-  FVector GetHandJointTargetLocationL() const override { return mHandJointTargetLocationL; }
-  FVector GetHandJointTargetLocationR() const override { return mHandJointTargetLocationR; }
-
-  FVector GetRestLocationL() const override { return mRestLocationL; }
-  FVector GetRestLocationR() const override { return mRestLocationR; }
-
-  FVector GetAimLocation() const  override { return mAimLocation; }
-
-  FVector GetHandLocationL() const override { return mHandLocationL; }
-  FRotator GetHandRotationL() const override { return mHandRotationL; }
-
-  FVector GetHandLocationR() const override { return mHandLocationR; }
-  FRotator GetHandRotationR() const override { return mHandRotationR; }
+  UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = TorchIK)
+  FRotator mRelativeRotationOffset = FRotator{ 8.0f, 70.0f, 5.0f };
 
 public:
 
@@ -107,5 +34,18 @@ public:
 
 protected:
 
-  virtual void BeginPlay() override;
+  /*
+  * Weapon system
+  */
+
+  float GetFireRate() const override { return mFireRate; }
+
+public:
+
+  /*
+  * IK system
+  */
+
+  FVector GetRelativeLocation() override { return mRelativeLocationOffset; }
+  FRotator GetRelativeRotation() override { return mRelativeRotationOffset; }
 };

@@ -120,15 +120,7 @@ public:
 
 public:
 
-  /*
-  * Weapon system
-  */
-
-  FORCEINLINE void SetCurrentWeaponActor(ATorchWeapon* weaponActor) { mCurrentWeaponActor = weaponActor; }
-
-public:
-
-  ATorchTPSCharacter(const FObjectInitializer& initializer);
+  ATorchTPSCharacter();
 
 protected:
 

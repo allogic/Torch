@@ -38,4 +38,8 @@ struct FTorchBSP
 
   static void Destroy(
     FBSPNode*& node);
+
+  static void QueryChildren(
+    FBSPNode* node,
+    TArray<FBSPNode*>& children);
 };
